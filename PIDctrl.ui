@@ -1,0 +1,1084 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1072</width>
+    <height>668</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLCDNumber" name="PIDOdis">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>300</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="value" stdset="0">
+     <double>0.555000000000000</double>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="PIDoutdis">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>360</y>
+      <width>118</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>24</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>330</y>
+      <width>61</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PID0 OUT</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="PIDer">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>300</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>330</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Error</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>330</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Phase</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>330</y>
+      <width>61</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>RMS phase</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="Cordicphase">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>300</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="Phaserms">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>300</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="apply">
+    <property name="geometry">
+     <rect>
+      <x>790</x>
+      <y>330</y>
+      <width>81</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Apply</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="LoadRms">
+    <property name="geometry">
+     <rect>
+      <x>440</x>
+      <y>300</y>
+      <width>81</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Load RMS</string>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="AOoffset">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>450</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>410</y>
+      <width>71</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Avg Num</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>460</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>I-ch</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_8">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>510</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Q-ch</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_9">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>560</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AO-ch</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_10">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>370</y>
+      <width>51</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PIDOUT</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="Ichansel">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>460</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string notr="true">ADC0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="Qchansel">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>510</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <property name="maxVisibleItems">
+     <number>4</number>
+    </property>
+    <item>
+     <property name="text">
+      <string>ADC0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>ADC3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="AOsel">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>560</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>AO0(JAU)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AO1(JAD)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AO2(JBU)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AO3(JBD)</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLabel" name="label_13">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>500</y>
+      <width>81</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PID Inputsel</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_14">
+    <property name="geometry">
+     <rect>
+      <x>650</x>
+      <y>310</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Kp</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_15">
+    <property name="geometry">
+     <rect>
+      <x>650</x>
+      <y>330</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Ki</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_16">
+    <property name="geometry">
+     <rect>
+      <x>650</x>
+      <y>360</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Kd</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_17">
+    <property name="geometry">
+     <rect>
+      <x>560</x>
+      <y>390</y>
+      <width>71</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Out_min</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_18">
+    <property name="geometry">
+     <rect>
+      <x>560</x>
+      <y>420</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Out max</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_20">
+    <property name="geometry">
+     <rect>
+      <x>560</x>
+      <y>450</y>
+      <width>141</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Out offset(center value)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_21">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>590</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AO gain</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="PIDinsel">
+    <property name="geometry">
+     <rect>
+      <x>180</x>
+      <y>500</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Phase0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Phase1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Phase2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>OFF</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QDoubleSpinBox" name="PIDoutmin">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>390</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="PIDoutmax">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>420</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="PIDKp">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>300</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="PIDKd">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>360</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="PIDKi">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>330</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="PIDON">
+    <property name="geometry">
+     <rect>
+      <x>540</x>
+      <y>300</y>
+      <width>81</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PID Enable</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="PIDreset">
+    <property name="geometry">
+     <rect>
+      <x>810</x>
+      <y>450</y>
+      <width>81</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PID Reset</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="Looptime">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>0</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>10</y>
+      <width>81</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Looptime</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_12">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>10</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>I,Q Lisaa</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_19">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>10</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Phase</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="Cordicsel">
+    <property name="geometry">
+     <rect>
+      <x>180</x>
+      <y>460</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Cordic 0(avg)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Cordic 1(avg)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Cordic 2(raw)</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLabel" name="label_22">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>470</y>
+      <width>61</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cordic Sel</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_23">
+    <property name="geometry">
+     <rect>
+      <x>460</x>
+      <y>360</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Setpoint</string>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="Setpoint">
+    <property name="geometry">
+     <rect>
+      <x>540</x>
+      <y>350</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_24">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>420</y>
+      <width>101</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AO sourece(PID)</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="AO_source">
+    <property name="geometry">
+     <rect>
+      <x>180</x>
+      <y>410</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Manual</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>PID0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>PID1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>PID2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>PID3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="comboBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>410</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>1 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>2 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>4 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>8 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>16 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>32 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>64 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>128 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>256 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>512 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>1024 avg</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QDoubleSpinBox" name="AOmanual">
+    <property name="geometry">
+     <rect>
+      <x>770</x>
+      <y>410</y>
+      <width>95</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>690</x>
+      <y>420</y>
+      <width>91</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AO manul</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="AOgain">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>580</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>1(fix)</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>720</x>
+      <y>540</y>
+      <width>121</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Raw DMA record</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="Reccol2">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>580</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>AI0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="Reccol3">
+    <property name="geometry">
+     <rect>
+      <x>690</x>
+      <y>580</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>AI0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="Reccol4">
+    <property name="geometry">
+     <rect>
+      <x>800</x>
+      <y>580</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>AI0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="Reccol1">
+    <property name="geometry">
+     <rect>
+      <x>460</x>
+      <y>580</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>AI0</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI1</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI2</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AI3</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QComboBox" name="REC_avg">
+    <property name="geometry">
+     <rect>
+      <x>620</x>
+      <y>540</y>
+      <width>89</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>1 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>2 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>4 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>8 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>16 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>32 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>64 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>128 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>256 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>512 avg</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>1024 avg</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QPlainTextEdit" name="REC_path">
+    <property name="geometry">
+     <rect>
+      <x>460</x>
+      <y>530</y>
+      <width>131</width>
+      <height>41</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_25">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>540</y>
+      <width>50</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>File path</string>
+    </property>
+   </widget>
+   <widget class="QFrame" name="IQgraph">
+    <property name="geometry">
+     <rect>
+      <x>19</x>
+      <y>29</y>
+      <width>251</width>
+      <height>251</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+   </widget>
+   <widget class="QFrame" name="Phasechart">
+    <property name="geometry">
+     <rect>
+      <x>289</x>
+      <y>29</y>
+      <width>581</width>
+      <height>251</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="AIVrev">
+    <property name="geometry">
+     <rect>
+      <x>180</x>
+      <y>540</y>
+      <width>62</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_26">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>540</y>
+      <width>57</width>
+      <height>14</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AI vref</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1072</width>
+     <height>19</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
