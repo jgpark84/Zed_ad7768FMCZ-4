@@ -58,6 +58,10 @@ AO_BASE = [
     BASE + 0x1A0,
 ]
 
+# CN0531 / AD5791: two extra 20-bit DAC channels in the 56-byte control stream.
+AO20_BASE = [BASE + 0x1D0, BASE + 0x1E8]
+AO_REG_BASES = AO_BASE + AO20_BASE
+
 REG_APPLY = BASE + 0x1C0
 
 # AO block offsets
@@ -68,22 +72,20 @@ AO_OFFSET = 0x0C
 AO_MIN    = 0x10
 AO_MAX    = 0x14
 
-# ao_scaler does: (source * gain >> 16) + offset
-#
-# Manual source is already a 16-bit DAC code, so it must pass through:
-#     gain = 1.0 Q16.16 = 0x00010000, offset = 0
-#
-# PID source is signed32 and is mapped to unsigned 16-bit DAC space:
-#     gain raw = 1  -> source / 65536
-#     offset = user AO offset (normally 32768)
+# Both AO scalers perform: (source * gain >> 16) + offset.
+# Manual is already a DAC code, so pass it through with Q16.16 unity.
+# For signed32 PID sources, scale the full PID range into the selected
+# DAC resolution: /65536 for 16-bit AO, /4096 for 20-bit AO.
 AO_GAIN_MANUAL = 0x00010000
 AO_GAIN_PID = 1
+AO20_GAIN_PID = 16
 
-# No dedicated AO min/max widgets currently exist in the UI.
+# No dedicated DAC-code limit widgets currently exist in the UI.
 FIXED_AO_MIN = 0
-FIXED_AO_MAX = 65535
+FIXED_AO_MAX = 0xFFFF
+FIXED_AO20_MAX = 0xFFFFF
 
-FRAME_BYTES = 32
+FRAME_BYTES = 56
 
 CONTROL_DTYPE = np.dtype([
     ("avg0",   "<i4"),
@@ -96,7 +98,14 @@ CONTROL_DTYPE = np.dtype([
     ("ao1",    "<u2"),
     ("ao2",    "<u2"),
     ("ao3",    "<u2"),
+    ("ao4",    "<u4"),  # 20-bit DAC code, 32-bit IIO storage
+    ("ao5",    "<u4"),
+    ("pid0",   "<i4"),
+    ("pid1",   "<i4"),
+    ("pid2",   "<i4"),
+    ("pid3",   "<i4"),
 ])
+assert CONTROL_DTYPE.itemsize == FRAME_BYTES, "Control IIO frame layout mismatch"
 
 BAM_TO_RAD = 2.0 * np.pi / (2 ** 32)
 RAD_TO_BAM = (2 ** 32) / (2.0 * np.pi)
@@ -145,36 +154,36 @@ def wrapped_phase_error(setpoint_rad, phase_rad):
 # =============================================================================
 
 ADC_COUNTS_FULL_SCALE = float(2 ** 23)  # signed 24-bit ADC positive full-scale code
-DAC_CODE_MAX = 65535
+DAC_CODE_MAX = FIXED_AO_MAX  # existing AO0..AO3 monitoring is 16-bit
 
 def adc_counts_to_physical(counts, vref):
     """Signed ADC counts -> volts, with AIVref interpreted as +full-scale volts."""
     return np.asarray(counts, dtype=np.float64) * (float(vref) / ADC_COUNTS_FULL_SCALE)
 
-def ao_abs_to_cts(value, out_min, out_max):
-    """Absolute physical AO value -> unsigned 16-bit DAC code."""
+def ao_abs_to_cts(value, out_min, out_max, code_max=DAC_CODE_MAX):
+    """Physical AO value -> 16-bit or 20-bit unsigned DAC code."""
     lo = float(out_min)
     hi = float(out_max)
     if not hi > lo:
         raise ValueError("AO physical max must be greater than min")
-    code = int(round((float(value) - lo) * DAC_CODE_MAX / (hi - lo)))
-    return max(0, min(DAC_CODE_MAX, code))
+    code = int(round((float(value) - lo) * code_max / (hi - lo)))
+    return max(0, min(code_max, code))
 
-def ao_cts_to_abs(code, out_min, out_max):
-    """Unsigned 16-bit DAC code -> absolute physical AO value."""
+def ao_cts_to_abs(code, out_min, out_max, code_max=DAC_CODE_MAX):
+    """Unsigned 16- or 20-bit DAC monitor code -> physical AO value."""
     lo = float(out_min)
     hi = float(out_max)
     if not hi > lo:
         return float('nan')
-    return lo + float(code) * (hi - lo) / DAC_CODE_MAX
+    return lo + float(code) * (hi - lo) / code_max
 
-def pid_limit_from_ao_code(code, center_code):
-    """AO code limit -> PID signed32 domain for AO_GAIN_PID=1.
+def pid_limit_from_ao_code(code, center_code, gain_raw=AO_GAIN_PID):
+    """AO code limit -> saturated signed32 PID limit for selected gain.
 
-    ao_scaler: AO_code = (PID * 1 >> 16) + center_code
-    therefore PID ~= (AO_code - center_code) * 65536.
+    ao_scaler: DAC_code = (PID * gain_raw >> 16) + center_code.
+    AO0..AO3 gain_raw=1; AO4/AO5 gain_raw=16.
     """
-    raw = (int(code) - int(center_code)) * 65536
+    raw = (int(code) - int(center_code)) * (65536 // gain_raw)
     return max(-2147483648, min(2147483647, raw))
 
 
@@ -383,25 +392,26 @@ class PIDControllerGUI:
         except Exception:
             pass
 
-        # AO gain is selected internally:
-        # Manual -> 1.0 (0x00010000), PID -> raw 1 for signed32-to-u16 mapping.
+        # AO gain is selected internally to preserve the existing controls.
         self.window.AOgain.setEnabled(False)
         self.window.AOgain.setToolTip(
-            "Automatic: Manual=1.0 pass-through, PID source=signed32 to u16 scaling"
+            "Automatic: Manual=1.0; PID=raw 1 (16-bit) or raw 16 (20-bit)"
         )
 
         # Current control DMA contains phase0/phase1 but not phase2.
         # CORDIC2 can still be configured; live phase plot is unavailable.
         self.window.statusbar.showMessage("Starting control stream...")
 
-        # PIDOdis can truthfully show selected AO output, because AO0..3 are
-        # actually in the control DMA. PID internal output is not streamed.
+        # PIDOdis shows the selected AO0..AO5 monitor code converted to
+        # physical units. The 56-byte stream also includes PID0..PID3.
         try:
             self.window.label.setText("AO OUT")
         except Exception:
             pass
 
-        self.window.PIDoutdis.setRange(0, 65535)
+        self.window.PIDoutdis.setRange(0, FIXED_AO_MAX)
+        self.window.AOsel.currentIndexChanged.connect(self._update_ao_monitor)
+        self._update_ao_monitor(self.window.AOsel.currentIndex())
 
         # Looptime display is GUI refresh timing, not FPGA loop time.
         try:
@@ -498,6 +508,17 @@ class PIDControllerGUI:
         else:
             self.window.PIDON.setText("PID Disabled")
 
+    def _update_ao_monitor(self, ao_index):
+        # Select the correct DAC width for the selected monitored output.
+        code_max = FIXED_AO20_MAX if ao_index >= len(AO_BASE) else FIXED_AO_MAX
+        self.window.PIDoutdis.setRange(0, code_max)
+        self.window.PIDoutdis.setFormat("%p%")
+        self.window.PIDoutdis.setEnabled(True)
+        self.window.PIDoutdis.setToolTip(
+            f"AO{ao_index} {'20-bit' if ao_index >= len(AO_BASE) else '16-bit'} "
+            "code from the 56-byte control DMA"
+        )
+
     def collect_apply_writes(self):
         # ComboBox order has been deliberately made equal to FPGA encoding.
         avg_shift = self.window.comboBox.currentIndex()
@@ -526,24 +547,26 @@ class PIDControllerGUI:
 
         ao_index = self.window.AOsel.currentIndex()
         ao_source = self.window.AO_source.currentIndex()
-        ao_base = AO_BASE[ao_index]
+        ao_base = AO_REG_BASES[ao_index]
+        is_ao20 = ao_index >= len(AO_BASE)
+        code_max = FIXED_AO20_MAX if is_ao20 else FIXED_AO_MAX
+        pid_gain = AO20_GAIN_PID if is_ao20 else AO_GAIN_PID
 
         ao_manual_phys = float(self.window.AOmanual.value())
         ao_center_phys = float(self.window.AOoffset.value())
 
-        ao_manual = ao_abs_to_cts(ao_manual_phys, ao_phys_min, ao_phys_max)
-        ao_center = ao_abs_to_cts(ao_center_phys, ao_phys_min, ao_phys_max)
+        ao_manual = ao_abs_to_cts(ao_manual_phys, ao_phys_min, ao_phys_max, code_max)
+        ao_center = ao_abs_to_cts(ao_center_phys, ao_phys_min, ao_phys_max, code_max)
 
-        # PID internal limits are derived from the physical AO endpoints.
-        # With AO_GAIN_PID=1, signed32 PID maps to signed16 DAC delta counts.
-        pid_min = pid_limit_from_ao_code(0, ao_center)
-        pid_max = pid_limit_from_ao_code(DAC_CODE_MAX, ao_center)
+        # PID0 internal limits follow the selected AO scaling, as before.
+        pid_min = pid_limit_from_ao_code(0, ao_center, pid_gain)
+        pid_max = pid_limit_from_ao_code(code_max, ao_center, pid_gain)
 
         if ao_source == 0:  # Manual: absolute physical value -> DAC code
             ao_gain_reg = AO_GAIN_MANUAL
             ao_offset_reg = 0
         else:               # PID: zero PID output -> requested physical center
-            ao_gain_reg = AO_GAIN_PID
+            ao_gain_reg = pid_gain
             ao_offset_reg = ao_center
 
         x_reg, y_reg = CORDIC_REGS[cordic_index]
@@ -568,7 +591,7 @@ class PIDControllerGUI:
             (ao_base + AO_GAIN, ao_gain_reg),
             (ao_base + AO_OFFSET, ao_offset_reg),
             (ao_base + AO_MIN, FIXED_AO_MIN),
-            (ao_base + AO_MAX, FIXED_AO_MAX),
+            (ao_base + AO_MAX, code_max),
 
             # Commit all shadow registers at once.
             (REG_APPLY, 1),
@@ -907,7 +930,7 @@ class PIDControllerGUI:
         if cordic == 1:
             return frames["phase1"].astype(np.float64) * BAM_TO_RAD
 
-        # phase2 is not in the current 32-byte control DMA payload.
+        # phase2 is not included in the current 56-byte control DMA payload.
         return None
 
     def update_gui(self):
@@ -966,18 +989,20 @@ class PIDControllerGUI:
                 "CORDIC2 selected: raw I/Q and phase2 are not in the current control DMA."
             )
 
-        # Actual AO codes are in the control DMA; convert them back to the
-        # selected AO's physical scale for the numeric display.
+        # All six AO monitor channels are carried by the 56-byte stream.
         ao_index = self.window.AOsel.currentIndex()
-        ao_code = int(frames[f"ao{ao_index}"][-1])
-        ao_phys = ao_cts_to_abs(
-            ao_code,
-            self.window.PIDoutmin.value(),
-            self.window.PIDoutmax.value(),
-        )
-        if math.isfinite(ao_phys):
-            self.window.PIDOdis.display(ao_phys)
-        self.window.PIDoutdis.setValue(ao_code)
+        if 0 <= ao_index < len(AO_REG_BASES):
+            ao_code = int(frames[f"ao{ao_index}"][-1])
+            code_max = FIXED_AO20_MAX if ao_index >= len(AO_BASE) else FIXED_AO_MAX
+            ao_phys = ao_cts_to_abs(
+                ao_code,
+                self.window.PIDoutmin.value(),
+                self.window.PIDoutmax.value(),
+                code_max,
+            )
+            if math.isfinite(ao_phys):
+                self.window.PIDOdis.display(ao_phys)
+            self.window.PIDoutdis.setValue(ao_code)
 
     def load_rms(self):
         """

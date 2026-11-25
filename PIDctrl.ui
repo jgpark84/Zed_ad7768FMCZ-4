@@ -318,6 +318,16 @@
       <string>AO3(JBD)</string>
      </property>
     </item>
+    <item>
+     <property name="text">
+      <string>AO4(JC)</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>AO5(JD)</string>
+     </property>
+    </item>
    </widget>
    <widget class="QLabel" name="label_13">
     <property name="geometry">
