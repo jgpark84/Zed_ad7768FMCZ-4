@@ -1,0 +1,539 @@
+module pid_core #(
+  parameter PHASE_MODE = 0
+)(
+  input  wire               clk,
+  input  wire               rst,
+
+  input  wire               update,
+  input  wire               enable,
+  input  wire               reset_pid,
+
+  input  wire signed [31:0] input_data,
+  input  wire signed [31:0] setpoint,
+
+  input  wire signed [31:0] kp,
+  input  wire signed [31:0] ki,
+  input  wire signed [31:0] kd,
+
+  input  wire signed [31:0] out_min,
+  input  wire signed [31:0] out_max,
+
+  output reg  signed [31:0] output_data,
+  output reg  signed [31:0] error_out,
+  output reg  signed [31:0] integrator_out,
+  output reg         [31:0] status
+);
+
+  // ================================================================
+  // PID state
+  // ================================================================
+
+  reg signed [31:0] prev_error;
+  // Integrator state is kept in Q16.16 so sub-LSB I increments are
+  // preserved across updates.  The old implementation shifted the I
+  // product by 16 before accumulation, which discarded fractional
+  // increments on every control update.
+  reg signed [63:0] integrator_q16;
+
+
+  // ================================================================
+  // Pipeline valid
+  // ================================================================
+
+  reg v0;
+  reg v1;
+  reg v2;
+  reg v3;
+  reg v4;
+  reg v5;
+  reg v6;
+  reg v7;
+
+
+  // ================================================================
+  // Stage 0
+  // Normalized input + configuration snapshot
+  //
+  // input_data is already signed32 in the PID input domain.
+  // Any source-specific normalization is performed before this module.
+  // ================================================================
+
+  reg signed [31:0] input_data_s0;
+
+  reg signed [31:0] setpoint_s0;
+  reg signed [31:0] kp_s0;
+  reg signed [31:0] ki_s0;
+  reg signed [31:0] kd_s0;
+  reg signed [31:0] out_min_s0;
+  reg signed [31:0] out_max_s0;
+
+
+  // ================================================================
+  // Stage 1
+  // Registered normalized input
+  // ================================================================
+
+  reg signed [31:0] input_data_s1;
+
+  reg signed [31:0] setpoint_s1;
+  reg signed [31:0] kp_s1;
+  reg signed [31:0] ki_s1;
+  reg signed [31:0] kd_s1;
+  reg signed [31:0] out_min_s1;
+  reg signed [31:0] out_max_s1;
+
+
+  // ================================================================
+  // Stage 2
+  // Error + derivative difference
+  // ================================================================
+
+  reg signed [31:0] error_s2;
+  reg signed [32:0] delta_error_s2;
+
+  reg signed [31:0] kp_s2;
+  reg signed [31:0] ki_s2;
+  reg signed [31:0] kd_s2;
+  reg signed [31:0] out_min_s2;
+  reg signed [31:0] out_max_s2;
+
+
+  // ================================================================
+  // Stage 3
+  // P / I / D multiplications
+  // ================================================================
+
+  reg signed [63:0] p_product_s3;
+  reg signed [63:0] i_product_s3;
+  reg signed [64:0] d_product_s3;
+
+  reg signed [31:0] error_s3;
+  reg signed [31:0] out_min_s3;
+  reg signed [31:0] out_max_s3;
+
+
+  // ================================================================
+  // Stage 4
+  // P/D Q16.16 conversion + full-precision I product pipeline
+  // ================================================================
+
+  reg signed [63:0] p_term_s4;
+  reg signed [63:0] i_product_q16_s4;
+  reg signed [63:0] d_term_s4;
+
+  reg signed [31:0] error_s4;
+  reg signed [31:0] out_min_s4;
+  reg signed [31:0] out_max_s4;
+
+
+  // ================================================================
+  // Stage 5
+  // Integrator update
+  // ================================================================
+
+  reg signed [63:0] new_integrator_s5;
+  reg signed [63:0] p_term_s5;
+  reg signed [63:0] d_term_s5;
+
+  reg signed [31:0] error_s5;
+  reg signed [31:0] out_min_s5;
+  reg signed [31:0] out_max_s5;
+
+
+  // ================================================================
+  // Stage 6
+  // P + I
+  // ================================================================
+
+  reg signed [63:0] sum_pi_s6;
+  reg signed [63:0] d_term_s6;
+  reg signed [63:0] new_integrator_s6;
+
+  reg signed [31:0] error_s6;
+  reg signed [31:0] out_min_s6;
+  reg signed [31:0] out_max_s6;
+
+
+  // ================================================================
+  // Stage 7
+  // (P + I) + D
+  // ================================================================
+
+  reg signed [63:0] output_sum_s7;
+  reg signed [63:0] new_integrator_s7;
+
+  reg signed [31:0] error_s7;
+  reg signed [31:0] out_min_s7;
+  reg signed [31:0] out_max_s7;
+
+
+  // ================================================================
+  // Combinational expressions between pipeline stages
+  // ================================================================
+
+  // ------------------------------------------------------------
+  // General-mode error uses 33 bits so saturation can be detected.
+  // ------------------------------------------------------------
+
+  wire signed [32:0] normal_error_wide;
+
+  assign normal_error_wide =
+    $signed({setpoint_s1[31], setpoint_s1}) -
+    $signed({input_data_s1[31], input_data_s1});
+
+
+  wire signed [31:0] normal_error_sat;
+
+  assign normal_error_sat =
+    (normal_error_wide > 33'sh07FFFFFFF) ?
+      32'sh7FFFFFFF :
+
+    (normal_error_wide < -33'sh080000000) ?
+      32'sh80000000 :
+
+      normal_error_wide[31:0];
+
+
+  // ------------------------------------------------------------
+  // Phase-mode subtraction intentionally wraps at 32 bits.
+  // ------------------------------------------------------------
+
+  wire signed [31:0] phase_error;
+
+  assign phase_error =
+    $signed(setpoint_s1) -
+    $signed(input_data_s1);
+
+
+  wire signed [31:0] error_calc;
+
+  assign error_calc =
+    (PHASE_MODE != 0) ?
+      phase_error :
+      normal_error_sat;
+
+
+  wire signed [32:0] delta_error_calc;
+
+  assign delta_error_calc =
+    $signed({error_calc[31], error_calc}) -
+    $signed({prev_error[31], prev_error});
+
+
+  // ------------------------------------------------------------
+  // Integrator candidate
+  // ------------------------------------------------------------
+  //
+  // integrator_q16 and i_product_q16_s4 both retain 16 fractional bits.
+  // A 65-bit adder prevents the accumulation add itself from wrapping
+  // before the range check.  The configured output limits are converted
+  // to the same Q16.16 domain before comparison.
+
+  wire signed [64:0] integrator_candidate_q16;
+  wire signed [63:0] out_min_q16;
+  wire signed [63:0] out_max_q16;
+  wire signed [63:0] integrator_next_q16;
+  wire signed [63:0] integrator_next_int;
+
+  assign integrator_candidate_q16 =
+    $signed({integrator_q16[63], integrator_q16}) +
+    $signed({i_product_q16_s4[63], i_product_q16_s4});
+
+  assign out_min_q16 =
+    $signed({{16{out_min_s4[31]}}, out_min_s4, 16'b0});
+
+  assign out_max_q16 =
+    $signed({{16{out_max_s4[31]}}, out_max_s4, 16'b0});
+
+  assign integrator_next_q16 =
+    (integrator_candidate_q16 > $signed({out_max_q16[63], out_max_q16})) ?
+      out_max_q16 :
+    (integrator_candidate_q16 < $signed({out_min_q16[63], out_min_q16})) ?
+      out_min_q16 :
+      integrator_candidate_q16[63:0];
+
+  // Convert to the PID output domain only after accumulation.
+  assign integrator_next_int =
+    $signed(integrator_next_q16) >>> 16;
+
+
+  // ================================================================
+  // Main sequential pipeline
+  // ================================================================
+
+  always @(posedge clk) begin
+
+    if (rst || reset_pid) begin
+
+      output_data    <= 32'sd0;
+      error_out      <= 32'sd0;
+      integrator_out <= 32'sd0;
+      status         <= 32'd0;
+
+      prev_error     <= 32'sd0;
+      integrator_q16 <= 64'sd0;
+
+      v0 <= 1'b0;
+      v1 <= 1'b0;
+      v2 <= 1'b0;
+      v3 <= 1'b0;
+      v4 <= 1'b0;
+      v5 <= 1'b0;
+      v6 <= 1'b0;
+      v7 <= 1'b0;
+
+    end else begin
+
+      // Default pipeline propagation.
+      v1 <= v0;
+      v2 <= v1;
+      v3 <= v2;
+      v4 <= v3;
+      v5 <= v4;
+      v6 <= v5;
+      v7 <= v6;
+
+      // New transaction is accepted only on update + enable.
+      v0 <= 1'b0;
+
+
+      // ============================================================
+      // New update
+      // ============================================================
+
+      if (update) begin
+
+        if (!enable) begin
+
+          status[0] <= 1'b0;
+
+        end else begin
+
+          v0 <= 1'b1;
+
+          input_data_s0 <= input_data;
+          setpoint_s0  <= setpoint;
+
+          kp_s0 <= kp;
+          ki_s0 <= ki;
+          kd_s0 <= kd;
+
+          out_min_s0 <= out_min;
+          out_max_s0 <= out_max;
+
+        end
+      end
+
+
+      // ============================================================
+      // Stage 1
+      // Register already-normalized PID input
+      // ============================================================
+
+      if (v0) begin
+
+        input_data_s1 <= input_data_s0;
+        setpoint_s1   <= setpoint_s0;
+
+        kp_s1 <= kp_s0;
+        ki_s1 <= ki_s0;
+        kd_s1 <= kd_s0;
+
+        out_min_s1 <= out_min_s0;
+        out_max_s1 <= out_max_s0;
+
+      end
+
+
+      // ============================================================
+      // Stage 2
+      // Error calculation
+      // ============================================================
+
+      if (v1) begin
+
+        error_s2       <= error_calc;
+        delta_error_s2 <= delta_error_calc;
+
+        // Update derivative state here.
+        prev_error <= error_calc;
+
+        kp_s2 <= kp_s1;
+        ki_s2 <= ki_s1;
+        kd_s2 <= kd_s1;
+
+        out_min_s2 <= out_min_s1;
+        out_max_s2 <= out_max_s1;
+
+      end
+
+
+      // ============================================================
+      // Stage 3
+      // P / I / D multiplications in parallel
+      // ============================================================
+
+      if (v2) begin
+
+        p_product_s3 <=
+          $signed(error_s2) *
+          $signed(kp_s2);
+
+        i_product_s3 <=
+          $signed(error_s2) *
+          $signed(ki_s2);
+
+        d_product_s3 <=
+          $signed(delta_error_s2) *
+          $signed(kd_s2);
+
+        error_s3 <= error_s2;
+
+        out_min_s3 <= out_min_s2;
+        out_max_s3 <= out_max_s2;
+
+      end
+
+
+      // ============================================================
+      // Stage 4
+      // Convert P/D from Q16.16; preserve full I product precision
+      // ============================================================
+
+      if (v3) begin
+
+        p_term_s4 <=
+          $signed(p_product_s3) >>> 16;
+
+        // Keep the complete Q16.16 I increment.  Do not shift here:
+        // fractional I corrections must survive until after accumulation.
+        i_product_q16_s4 <=
+          $signed(i_product_s3);
+
+        d_term_s4 <=
+          $signed(d_product_s3) >>> 16;
+
+        error_s4 <= error_s3;
+
+        out_min_s4 <= out_min_s3;
+        out_max_s4 <= out_max_s3;
+
+      end
+
+
+      // ============================================================
+      // Stage 5
+      // Integrator
+      // ============================================================
+
+      if (v4) begin
+
+        // Commit the fractional accumulator state and pass only the
+        // integer/output-domain view to the downstream P+I+D pipeline.
+        integrator_q16    <= integrator_next_q16;
+        new_integrator_s5 <= integrator_next_int;
+
+        p_term_s5 <= p_term_s4;
+        d_term_s5 <= d_term_s4;
+
+        error_s5 <= error_s4;
+
+        out_min_s5 <= out_min_s4;
+        out_max_s5 <= out_max_s4;
+
+      end
+
+
+      // ============================================================
+      // Stage 6
+      // P + I
+      // ============================================================
+
+      if (v5) begin
+
+        sum_pi_s6 <=
+          $signed(p_term_s5) +
+          $signed(new_integrator_s5);
+
+        d_term_s6 <= d_term_s5;
+
+        new_integrator_s6 <= new_integrator_s5;
+
+        error_s6 <= error_s5;
+
+        out_min_s6 <= out_min_s5;
+        out_max_s6 <= out_max_s5;
+
+      end
+
+
+      // ============================================================
+      // Stage 7
+      // P + I + D
+      // ============================================================
+
+      if (v6) begin
+
+        output_sum_s7 <=
+          $signed(sum_pi_s6) +
+          $signed(d_term_s6);
+
+        new_integrator_s7 <= new_integrator_s6;
+
+        error_s7 <= error_s6;
+
+        out_min_s7 <= out_min_s6;
+        out_max_s7 <= out_max_s6;
+
+      end
+
+
+      // ============================================================
+      // Final stage
+      // Output saturation / readback
+      // ============================================================
+
+      if (v7) begin
+
+        status <= 32'd0;
+        status[0] <= 1'b1;
+
+
+        if ($signed(output_sum_s7) > $signed(out_max_s7)) begin
+
+          output_data <= out_max_s7;
+          status[1]   <= 1'b1;
+
+        end else if ($signed(output_sum_s7) < $signed(out_min_s7)) begin
+
+          output_data <= out_min_s7;
+          status[2]   <= 1'b1;
+
+        end else begin
+
+          output_data <= output_sum_s7[31:0];
+
+        end
+
+
+        error_out <= error_s7;
+
+
+        if (new_integrator_s7 > 64'sh000000007FFFFFFF)
+
+          integrator_out <= 32'sh7FFFFFFF;
+
+        else if (new_integrator_s7 < -64'sh0000000080000000)
+
+          integrator_out <= 32'sh80000000;
+
+        else
+
+          integrator_out <= new_integrator_s7[31:0];
+
+      end
+
+    end
+  end
+
+endmodule

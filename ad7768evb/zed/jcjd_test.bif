@@ -1,0 +1,4 @@
+all:
+{
+    ad7768evb_zed.runs/impl_1/system_top.bit
+}
